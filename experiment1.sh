@@ -4,45 +4,30 @@ show_help(){
 	echo "${line} 参数说明:（带*的为必填）
 	[option]		[说明]
 	-h      <null>		帮助
-	-t*     <任务类型>	1: 打包任务2的/var/www;	2: 登录fpt操作文件; 如果选择1，后面参数不需要写
 	-a*     <ftp地址>	ftp地址，i.g., localhost
 	-p      <端口>		默认21 
 	-u*     <user>		ftp用户名
 	-w*     <pswd> 		ftp密码
 	-o      <操作>		操作：upload, download, delete三选一; 默认为upload
-	-s*     <filepath>	待操作的文件位置 e.g., /home/littsk/desktop/1.txt
-	-d      <目标路径>	新文件所在文件夹的位置 e.g., /home/littsk/testdir", 默认为./
-}
-show_params(){
-	echo "${line} 您输入的参数为: "
-	echo "task		$task"
-	echo "address		$address"
-	echo "port		$port"
-	echo "user		$user"
-	echo "pass		$pass"
-	echo "operation	$operation"
-	echo "src_path	$src_path"
-	echo "dst_path	$dst_path"
+	-s*     <filepath>	源文件路径 例如/home/Tom/src/1.txt
+	-d      <filepath>	目的文件路径 例如/home/Tom/dst/1.txt 如果operation=delete，则不填"
 }
 
 line="================"
 # 设置变量
 need_help=""
-task=""
 address=""
 port=21
 user=""
 pass=""
 operation="upload"
 src_path=""
-filename=""
-dst_path="."
-dirpath=""
+dst_path=""
+
 
 ## 接收参数
-while getopts "t:ha:p:u:w:o:s:d:" opt; do
+while getopts "ha:p:u:w:o:s:d:" opt; do
 	case $opt in
-		t) task=$OPTARG ;;
 		h) need_help="true" ;;
 		a) address=$OPTARG ;; 
 		p) port=$OPTARG ;;
@@ -65,27 +50,6 @@ if [ $need_help ]; then
 	exit 0
 fi
 
-# 判断-t参数
-if [[ $task -ne 1 && $task -ne 2 || -z $task ]]; then
-	# echo "${line} -t参数错误，请选择1或者2"
-    show_help
-	exit 1
-fi
-
-
-## 任务1 打包文件
-if [ $task -eq 1 ]; then
-cd /var
-echo "${line} 以下文件将被打包"
-sudo -S tar -cvf backup.tar www << EOF
-1
-
-EOF
-echo "${line} 打包完毕，压缩包信息为："
-ls -l /var/backup.tar
-exit 0
-fi
-
 ## 任务2 登录ftp并传文件
 # 判断必要的参数是否为空
 if [[ -z $address || -z $user || -z $pass || -z $src_path ]]; then
@@ -100,11 +64,10 @@ if [ $operation != "upload" ] && [ $operation != "download" ] && [ $operation !=
     exit 1
 fi
 
-
-
-# 
-dirpath=$(dirname $src_path)
-filename=$(basename $src_path)
+if [[ $operation != "delete" && -z $dst_path ]]; then 
+	echo "${line} 请输入 -d参数: 目的文件路径"
+    exit 1
+fi
 
 echo "${line} 开始${operation}"
 
@@ -113,9 +76,7 @@ echo "${line} 开始${operation}"
 if [ $operation == "upload" ]; then
 ftp -n -v $address $port << EOF
 user $user $pass
-lcd $dirpath
-cd $dst_path
-put $filename
+put $src_path $dst_path
 quit
 EOF
 fi
@@ -123,17 +84,14 @@ fi
 if [ $operation == "download" ]; then
 ftp -n -v $address $port << EOF
 user $user $pass
-cd $dirpath
-lcd $dst_path
-get $filename
+get $src_path $dst_path
 EOF
 fi
 
 if [ $operation == "delete" ]; then
 ftp -n -v $address $port << EOF
 user $user $pass
-cd $dirpath
-delete $filename
+delete $src_path
 EOF
 fi
 
