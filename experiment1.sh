@@ -1,4 +1,4 @@
-#!/bin.bash
+#!/bin/bash
 
 show_help(){
 	echo "${line} 参数说明:（带*的为必填）
@@ -40,8 +40,6 @@ while getopts "ha:p:u:w:o:s:d:" opt; do
 			exit 1;;
 	esac
 done
-
-# show_params
 
 ## -h 帮助
 # need_help非空则输入help
